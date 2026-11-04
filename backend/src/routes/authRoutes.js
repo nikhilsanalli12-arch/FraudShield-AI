@@ -23,3 +23,4 @@ router.get('/me', authMiddleware, (req, res) => {
 });
 
 export default router;
+

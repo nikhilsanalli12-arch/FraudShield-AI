@@ -21,12 +21,14 @@ alter table public.profiles enable row level security;
 
 -- 3. RLS Policies: Minimum Required Access
 -- Rule: Users can view only their own profile
+drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own"
   on public.profiles
   for select
   using (auth.uid() = id);
 
--- Rule: Users can update only their own profile (trigger ensures role cannot be altered)
+-- Rule: Users can update only their own profile
+drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own"
   on public.profiles
   for update
@@ -92,6 +94,15 @@ drop trigger if exists trigger_prevent_profile_role_update on public.profiles;
 create trigger trigger_prevent_profile_role_update
   before update on public.profiles
   for each row execute function public.prevent_profile_role_update();
+
+-- 6. Column-Level Privilege Restrictions (Defense-in-Depth)
+-- Revoke all table-level access from anon users
+revoke all on table public.profiles from anon;
+
+-- Restrict authenticated users: They can SELECT, but can UPDATE ONLY non-role columns
+revoke all on table public.profiles from authenticated;
+grant select on table public.profiles to authenticated;
+grant update (full_name, updated_at) on table public.profiles to authenticated;
 
 -- Restrict function execution permissions
 revoke execute on function public.handle_new_user() from public;

@@ -16,3 +16,4 @@ export function isSupabaseConfigured() {
   const isPlaceholderKey = !config.supabaseServiceRoleKey || config.supabaseServiceRoleKey.includes('your-supabase-service-role-key');
   return !isPlaceholderUrl && !isPlaceholderKey;
 }
+

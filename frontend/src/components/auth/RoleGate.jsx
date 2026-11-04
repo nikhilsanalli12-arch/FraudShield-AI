@@ -38,3 +38,4 @@ export default function RoleGate({ allowedRoles = [], children }) {
 
   return children;
 }
+

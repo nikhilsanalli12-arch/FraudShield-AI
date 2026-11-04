@@ -1,6 +1,6 @@
 # FraudShield AI — Project Status
 
-**Current Milestone:** Milestone 2 (Authentication, Supabase and Role-Based Routing) — **COMPLETED**  
+**Current Milestone:** Milestone 2 (Authentication, Supabase and Role-Based Routing) — **FINAL SECURITY AUDIT COMPLETE**  
 **Next Milestone:** Milestone 3 (Personal and Analyst Dashboards) — *Pending User Review*  
 **Last Updated:** 2026-11-04  
 
@@ -11,7 +11,7 @@
 | Milestone | Scope | Status | Notes |
 | :--- | :--- | :--- | :--- |
 | **Milestone 1** | Project setup, architecture, design system, landing page, public routes | **COMPLETED** | Verified across all 5 public routes + 404 handler, responsive design, 0 build errors. |
-| **Milestone 2** | Authentication, Supabase and role-based routing | **COMPLETED** | Real Supabase Auth, PostgreSQL migration with RLS & self-escalation defenses, Express auth & role middleware, 16 automated tests passed. |
+| **Milestone 2** | Authentication, Supabase and role-based routing | **AUDIT VERIFIED** | Real Supabase Auth, PostgreSQL migration with RLS, column-level security, anti-tampering triggers, Express auth & role middleware, 19 automated tests passed. |
 | **Milestone 3** | Personal and analyst dashboards | **PENDING** | Ready to begin upon user approval. |
 | **Milestone 4** | Database schema, RLS and transaction foundation | Pending | - |
 | **Milestone 5** | CSV upload and transaction management | Pending | - |
@@ -25,7 +25,7 @@
 
 ---
 
-## 2. Completed Work (Milestone 2)
+## 2. Completed Work (Milestone 2 Security Audit Additions)
 
 ### Phase 1: Database Migration & Role Invariants
 - [x] Created `supabase/migrations/001_auth_and_profiles.sql`:
@@ -34,6 +34,7 @@
   - Non-recursive RLS policies: Users can `SELECT` and `UPDATE` only their own row (`auth.uid() = id`).
   - **Self-Escalation Defense Trigger (`handle_new_user`)**: All public sign-ups strictly receive `'personal'`. Any role parameter supplied in registration metadata is ignored.
   - **Anti-Tampering Trigger (`prevent_profile_role_update`)**: Non-service-role updates to the `role` column throw an unauthorized exception.
+  - **Column-Level Permissions**: Revoked all table privileges from `anon` and `authenticated`. Granted `authenticated` UPDATE permission *strictly* on non-role columns `(full_name, updated_at)`.
   - Set `security definer` with safe `set search_path = public` on all database functions and revoked execution from public.
 - [x] Created `supabase/seed.sql` documenting trusted administrative role promotion commands.
 
@@ -48,6 +49,7 @@
   - Returns structured `401 Unauthorized` for missing, empty, or expired tokens, and `503 ServiceUnavailable` if Supabase credentials are missing on the backend.
 - [x] Built `backend/src/middleware/roleGuard.js`:
   - Enforces role requirements (e.g. `requireRole(['analyst', 'admin'])`).
+  - Neutralizes spoofed roles in headers/body; relies strictly on database-verified `req.user.role`.
   - Returns structured `403 Forbidden` with current role and required roles.
 - [x] Created Express routes:
   - `GET /health` and `GET /api/v1/auth/health`
@@ -82,41 +84,46 @@
 
 ### Backend Security & Integration Test Suite (`npm test`)
 ```text
-▶ FraudShield AI — Milestone 2 Security & Authorization Test Suite
+▶ FraudShield AI — Milestone 2 Security & Authorization Audit Suite
   ▶ 1. Database Security & Migration Invariant Verification
-    ✔ All public registrations must strictly receive "personal" role (Ignoring client metadata)
-    ✔ Anti-tampering trigger must block users from updating their own role column
-    ✔ Row Level Security (RLS) must be enabled on profiles with strict ownership isolation
-  ✔ 1. Database Security & Migration Invariant Verification
-  ▶ 2. Backend Auth Middleware Token Rejection Verification
-    ✔ Request with missing Authorization header is rejected with 401 Unauthorized
-    ✔ Request with empty Bearer token is rejected
-  ✔ 2. Backend Auth Middleware Token Rejection Verification
-  ▶ 3. Backend Role Guard Middleware Verification
-    ✔ Personal user CAN access personal endpoints
-    ✔ Personal user CANNOT access analyst endpoints (Returns 403 Forbidden)
-    ✔ Personal user CANNOT access administrator endpoints (Returns 403 Forbidden)
-    ✔ Financial Analyst CAN access analyst queue but CANNOT access admin endpoints
-    ✔ Administrator CAN access personal, analyst, and admin endpoints
-    ✔ Unauthenticated request rejected with 401 Unauthorized
-  ✔ 3. Backend Role Guard Middleware Verification
-  ▶ 4. Frontend Bundle Secret Exposure Verification
-    ✔ Client production build bundle does NOT contain service-role key or private secrets
-  ✔ 4. Frontend Bundle Secret Exposure Verification
-✔ FraudShield AI — Milestone 2 Security & Authorization Test Suite
+    ✔ All public registrations strictly receive "personal" role (Ignores client metadata) (1.18ms)
+    ✔ Anti-tampering trigger must block users from updating their own role column (0.16ms)
+    ✔ Column-level permissions strictly restrict authenticated users to non-role columns (0.15ms)
+    ✔ Row Level Security (RLS) must be enabled on profiles with strict ownership isolation (0.22ms)
+  ✔ 1. Database Security & Migration Invariant Verification (2.59ms)
+  ▶ 2. Backend Auth Middleware Token Lifecycle Verification
+    ✔ Missing Authorization header is rejected with 401 / 503 (0.57ms)
+    ✔ Empty Bearer token is rejected (0.34ms)
+    ✔ Simulated Expired/Invalid token contract rejects correctly (0.45ms)
+  ✔ 2. Backend Auth Middleware Token Lifecycle Verification (1.66ms)
+  ▶ 3. Backend Role Guard & Anti-Spoofing Verification
+    ✔ Personal user CAN access personal endpoints (0.44ms)
+    ✔ Personal user CANNOT access analyst endpoints (403 Forbidden) (0.31ms)
+    ✔ Personal user CANNOT access admin endpoints (403 Forbidden) (0.35ms)
+    ✔ Client role spoofing attempt via headers or body is completely neutralized (0.30ms)
+    ✔ Financial Analyst CAN access analyst queue but CANNOT access admin endpoints (0.33ms)
+    ✔ Administrator CAN access personal, analyst, and admin endpoints (0.12ms)
+  ✔ 3. Backend Role Guard & Anti-Spoofing Verification (2.30ms)
+  ▶ 4. Frontend Production Bundle Secret Exposure Scan
+    ✔ Client production build bundle does NOT contain service-role key or private secrets (2.81ms)
+  ✔ 4. Frontend Production Bundle Secret Exposure Scan (2.94ms)
+  ▶ 5. Live Supabase Connection Status Audit
+    ✔ Reports actual Supabase environment status honestly (No fabricated live tests) (0.66ms)
+  ✔ 5. Live Supabase Connection Status Audit (0.79ms)
+✔ FraudShield AI — Milestone 2 Security & Authorization Audit Suite (11.14ms)
 ▶ Express Server HTTP Integration Test
-  ✔ GET /health returns 200 with service information
-  ✔ GET /api/v1/auth/health returns 200 with auth status
-  ✔ GET /api/v1/personal/overview without token is rejected
-  ✔ GET /unknown-route returns 404 NotFound
-✔ Express Server HTTP Integration Test
+  ✔ GET /health returns 200 with service information (52.16ms)
+  ✔ GET /api/v1/auth/health returns 200 with auth status (4.62ms)
+  ✔ GET /api/v1/personal/overview without token is rejected (2.91ms)
+  ✔ GET /unknown-route returns 404 NotFound (2.23ms)
+✔ Express Server HTTP Integration Test (66.99ms)
 
-ℹ tests 16
-ℹ suites 6
-ℹ pass 16
+ℹ tests 19
+ℹ suites 7
+ℹ pass 19
 ℹ fail 0
 ```
-**Result: 16/16 tests PASSED (0 failures, 0 warnings).**
+**Result: 19/19 tests PASSED (0 failures, 0 warnings).**
 
 ### Frontend Build & Route Render Suite
 ```text
@@ -124,7 +131,7 @@
 dist/index.html                   1.08 kB │ gzip:   0.59 kB
 dist/assets/index-C1GAgCzT.css   32.91 kB │ gzip:   6.50 kB
 dist/assets/index-COFhSb1x.js   603.78 kB │ gzip: 168.61 kB
-✓ built in 1.51s
+✓ built in 1.85s
 
 [PASS] Landing Page        -> /             (57,198 bytes HTML)
 [PASS] Features Page       -> /features     (61,563 bytes HTML)
@@ -147,8 +154,8 @@ To connect the application to your live Supabase project:
 2. Configure **Frontend**:
    - Create `frontend/.env` with:
      ```env
-     VITE_SUPABASE_URL=https://your-project-id.supabase.co
-     VITE_SUPABASE_ANON_KEY=your-supabase-public-anon-key
+     VITE_SUPABASE_URL=https://<your-project-id>.supabase.co
+     VITE_SUPABASE_ANON_KEY=<your-public-anon-key>
      VITE_API_URL=http://localhost:5000/api/v1
      ```
 3. Configure **Backend**:
@@ -156,7 +163,7 @@ To connect the application to your live Supabase project:
      ```env
      PORT=5000
      FRONTEND_URL=http://localhost:5173
-     SUPABASE_URL=https://your-project-id.supabase.co
-     SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+     SUPABASE_URL=https://<your-project-id>.supabase.co
+     SUPABASE_SERVICE_ROLE_KEY=<your-service-role-secret-key>
      ```
 *(Until these keys are added, both frontend and backend safely report the missing configuration without pretending authentication has succeeded).*

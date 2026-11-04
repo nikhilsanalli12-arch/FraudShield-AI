@@ -49,3 +49,4 @@ describe('Express Server HTTP Integration Test', () => {
     assert.equal(body.error, 'NotFound');
   });
 });
+

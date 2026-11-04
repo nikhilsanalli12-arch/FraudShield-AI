@@ -20,3 +20,4 @@ UPDATE public.profiles
 SET role = 'admin', updated_at = now()
 WHERE email = 'admin.user@domain.com';
 */
+
