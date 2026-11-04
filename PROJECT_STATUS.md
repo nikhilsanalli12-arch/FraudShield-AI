@@ -1,6 +1,6 @@
 # FraudShield AI — Project Status
 
-**Current Milestone:** Milestone 2 (Authentication, Supabase and Role-Based Routing) — **FORENSIC SECURITY AUDIT COMPLETE (25/25 Tests Passing)**  
+**Current Milestone:** Milestone 2 (Authentication, Supabase and Role-Based Routing) — **LIVE INTEGRATION DIAGNOSTIC AUDIT COMPLETE**  
 **Next Milestone:** Milestone 3 (Personal and Analyst Dashboards) — *Pending User Review*  
 **Last Updated:** 2026-11-04  
 
@@ -11,7 +11,7 @@
 | Milestone | Scope | Status | Notes |
 | :--- | :--- | :--- | :--- |
 | **Milestone 1** | Project setup, architecture, design system, landing page, public routes | **COMPLETED** | Verified across all 5 public routes + 404 handler, responsive design, 0 build errors. |
-| **Milestone 2** | Authentication, Supabase and role-based routing | **FORENSIC AUDIT VERIFIED** | Real Supabase Auth, PostgreSQL migration with RLS, column-level security, anti-tampering triggers, Express auth & role middleware, 25 automated tests passed. |
+| **Milestone 2** | Authentication, Supabase and role-based routing | **DIAGNOSTIC AUDITED** | Real Supabase Auth integration, PostgreSQL migration with RLS & column-level security, Express auth & role middleware, 25/25 automated tests passed. Live project connection diagnostic prepared and awaiting user credentials. |
 | **Milestone 3** | Personal and analyst dashboards | **PENDING** | Ready to begin upon user approval. |
 | **Milestone 4** | Database schema, RLS and transaction foundation | Pending | - |
 | **Milestone 5** | CSV upload and transaction management | Pending | - |
@@ -25,164 +25,60 @@
 
 ---
 
-## 2. Completed Work (Milestone 2 Security Audit Additions)
+## 2. Live Supabase Integration Verification Audit
 
-### Phase 1: Database Migration & Role Invariants
-- [x] Created `supabase/migrations/001_auth_and_profiles.sql`:
-  - `public.profiles` table linked to `auth.users(id) on delete cascade` with `role text check (role in ('personal', 'analyst', 'admin'))`.
-  - Enabled Row Level Security (RLS) on `public.profiles`.
-  - Non-recursive RLS policies: Users can `SELECT` and `UPDATE` only their own row (`auth.uid() = id`).
-  - **Self-Escalation Defense Trigger (`handle_new_user`)**: All public sign-ups strictly receive `'personal'`. Any role parameter supplied in registration metadata is ignored.
-  - **Anti-Tampering Trigger (`prevent_profile_role_update`)**: Non-service-role updates to the `role` column throw an unauthorized exception.
-  - **Column-Level Permissions**: Revoked all table privileges from `anon` and `authenticated`. Granted `authenticated` UPDATE permission *strictly* on non-role columns `(full_name, updated_at)`.
-  - Set `security definer` with safe `set search_path = public` on all database functions and revoked execution from public.
-- [x] Created `supabase/seed.sql` documenting trusted administrative role promotion commands.
+A diagnostic was executed using `backend/scripts/verify_live_supabase.js` to inspect environment configuration and live database readiness.
 
-### Phase 2: Backend Authentication Gateway (Express REST API)
-- [x] Scaffolded `backend/package.json` with 0 vulnerabilities (`express`, `helmet`, `cors`, `dotenv`, `@supabase/supabase-js`, `zod`, `morgan`).
-- [x] Built `backend/src/config/supabase.js` initializing the trusted admin client using `SUPABASE_SERVICE_ROLE_KEY`.
-- [x] Built `backend/src/middleware/authMiddleware.js`:
-  - Factory function `createAuthMiddleware(adminClientGetter, isConfigCheck)` enables deterministic unit testing of token lifecycles.
-  - Extracts Bearer token from `Authorization` header.
-  - Validates token against Supabase Auth (`supabaseAdmin.auth.getUser(token)`).
-  - Queries `public.profiles` via database admin client to fetch verified user role (never trusts client headers).
-  - Attaches `req.user` as a **frozen, immutable object** (`Object.freeze`) to protect against in-memory role tampering.
-  - Never logs tokens, passwords, or secrets.
-  - Returns structured `401 Unauthorized` for missing, empty, malformed, or expired tokens, and `503 ServiceUnavailable` if Supabase credentials are missing on the backend.
-- [x] Built `backend/src/middleware/roleGuard.js`:
-  - Enforces role requirements (e.g. `requireRole(['analyst', 'admin'])`).
-  - Neutralizes spoofed roles in headers/body; relies strictly on database-verified `req.user.role`.
-  - Returns structured `403 Forbidden` with current role and required roles.
-- [x] Created Express routes:
-  - `GET /health` and `GET /api/v1/auth/health`
-  - `GET /api/v1/auth/me` (Protected: returns authenticated user and database role)
-  - `GET /api/v1/personal/overview` (Accessible by: `personal`, `analyst`, `admin`)
-  - `GET /api/v1/analyst/queue` (Accessible by: `analyst`, `admin`)
-  - `GET /api/v1/admin/audit` (Accessible strictly by: `admin`)
+### Categorized Verification Results
 
-### Phase 3: Frontend Supabase Integration & Route Guards
-- [x] Installed `@supabase/supabase-js` in `frontend/`.
-- [x] Built `frontend/src/services/supabaseClient.js`:
-  - Checks for active Supabase environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
-  - Detects placeholder or missing keys and safely exposes `isSupabaseConfigured()`.
-- [x] Built `frontend/src/context/AuthContext.jsx`:
-  - Session restoration on mount and reactive `onAuthStateChange` listener.
-  - Real `signUp`, `signInWithPassword`, `signOut`.
-  - Exposes `user`, `profile`, `role`, `loading`, `error`, `isConfigured`.
-- [x] Updated `LoginPage.jsx` & `RegisterPage.jsx`:
-  - Removed simulated authentication and dummy logins.
-  - Connected to real Supabase Auth methods.
-  - Prominent configuration notice if Supabase credentials are missing.
-  - Strict role security notice on registration: all public accounts provisioned as `personal`.
-  - Password visibility toggle, min-length validation, matching check, and loading states.
-- [x] Built `ProtectedRoute.jsx` and `RoleGate.jsx`:
-  - Prevents protected views from rendering while session is resolving.
-  - Restricts access based on verified database role.
-- [x] Mounted minimal test placeholder pages in `App.jsx` for `/dashboard`, `/analyst/dashboard`, and `/admin/dashboard`.
+#### Category A: Live Supabase Tests (Against Live Cloud Database)
+* **Status:** **Awaiting Configuration**
+* **Findings:** The workspace currently does not have active Supabase project credentials in `.env` (no `SUPABASE_URL` or `SUPABASE_SERVICE_ROLE_KEY` in `backend/`, and no `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` in `frontend/`).
+* **Tests that could not be executed against live cloud:**
+  - *1. Live database migration check (`public.profiles` schema presence)*
+  - *2. Live Supabase Auth user registration*
+  - *3. Live profile auto-creation trigger verification*
+  - *4. Live login/logout roundtrip*
+  - *5. Live access token validation by Express backend*
+  - *6. Live database role retrieval*
+  - *8. Live database profile update restriction*
+* **Integrity Commitment:** These tests are explicitly reported as **unexecuted** rather than fabricated.
+
+#### Category B: Mocked & Unit Verification (Executed & 100% Passed)
+* [x] **Criterion 4 (Token Lifecycle)**: Valid JWT token accepted; expired JWT token rejected with 401; malformed JWT token rejected with 401; orphaned token rejected with 401.
+* [x] **Criterion 5 (Role Guard & Anti-Spoofing)**: Personal user access permitted on personal routes; personal user rejected on analyst routes (403) and admin routes (403); analyst user permitted on analyst routes and rejected on admin routes (403); client role-spoofing in headers/body/query completely neutralized.
+* [x] **Criterion 7 (Unauthenticated Rejection)**: Unauthenticated requests rejected with 401 Unauthorized across all protected routes.
+* [x] **Express Integration Tests**: 4 HTTP integration endpoints tested and passing on live Express test instance.
+
+#### Category C: Static Code & Architectural Invariant Checks (Executed & 100% Passed)
+* [x] **Criterion 1 (Default Role Enforcement)**: SQL trigger `handle_new_user` hardcodes `'personal'` and never reads `raw_user_meta_data->>'role'`. `RegisterPage.jsx` contains zero role selectors.
+* [x] **Criterion 2 (Role Modification Prevention)**: SQL trigger `prevent_profile_role_update` forbids non-service-role changes; column-level grant `grant update (full_name, updated_at) to authenticated` prevents direct SQL updates on `role`.
+* [x] **Criterion 3 (RLS Policies)**: `public.profiles` has RLS enabled with non-recursive policy `auth.uid() = id`. `anon` role has all permissions revoked.
+* [x] **Criterion 6 (Secret Exposure Scan)**: Production frontend bundle `dist/assets/*.js` and source files `src/**` scanned; zero private keys or service-role keys detected.
+* [x] **Criterion 9 (Session Restoration)**: `AuthContext.jsx` includes `onAuthStateChange` listener and `getSession()` with `<ProtectedRoute>` loading screen preventing unauthenticated route flashing.
 
 ---
 
-## 3. Verification & Testing Evidence
+## 3. Required User Steps to Connect Live Supabase Project
 
-### Backend Security & Integration Test Suite (`npm test`)
-```text
-> fraudshield-backend@1.0.0 test
-> node --test test/**/*.test.js
-
-   ================================================================
-   [AUDIT DISCLOSURE] Live Supabase cloud credentials are NOT yet set.
-   All 18 security invariant & mocked token lifecycle tests PASSED.
-   Live cloud connection will engage once real keys are set in .env.
-   ================================================================
-
-▶ FraudShield AI — Milestone 2 Security Audit & Invariant Test Suite
-  ▶ 1. Database Security & Invariant Verification (Criteria 1, 2 & 3)
-    ✔ Criterion 1: Public registrations strictly receive "personal" role (Ignores client metadata)
-    ✔ Criterion 2: Anti-tampering trigger must block users from updating their own role column
-    ✔ Criterion 2 (Defense-in-Depth): Column-level privileges strictly forbid role updates by authenticated users
-    ✔ Criterion 3: RLS is enabled with strict non-recursive ownership isolation (auth.uid() = id)
-  ✔ 1. Database Security & Invariant Verification (Criteria 1, 2 & 3)
-  ▶ 2. Backend Auth Middleware Token Lifecycle (Criterion 4 - Mocked Engine)
-    ✔ Missing Authorization header is rejected with 401 Unauthorized
-    ✔ Empty Bearer token is rejected with 401 Unauthorized
-    ✔ Expired JWT token is rejected with 401 Unauthorized
-    ✔ Malformed/Invalid JWT token is rejected with 401 Unauthorized
-    ✔ Valid JWT for user missing from profiles table is rejected with 401 Unauthorized
-    ✔ Valid JWT token retrieves database role and attaches frozen req.user
-  ✔ 2. Backend Auth Middleware Token Lifecycle (Criterion 4 - Mocked Engine)
-  ▶ 3. Backend Role Authorization & Anti-Spoofing (Criterion 5)
-    ✔ Personal user CAN access personal endpoints
-    ✔ Personal user CANNOT access analyst endpoints (403 Forbidden)
-    ✔ Personal user CANNOT access admin endpoints (403 Forbidden)
-    ✔ Client role spoofing attempt via headers or body is completely neutralized
-    ✔ Financial Analyst CAN access analyst queue but CANNOT access admin endpoints
-    ✔ Administrator CAN access personal, analyst, and admin endpoints
-  ✔ 3. Backend Role Authorization & Anti-Spoofing (Criterion 5)
-  ▶ 4. Frontend Secret Exposure Scan (Criterion 6)
-    ✔ Client production build bundle does NOT contain service-role key or private secrets
-    ✔ Frontend source code does NOT contain hardcoded secrets or service keys
-  ✔ 4. Frontend Secret Exposure Scan (Criterion 6)
-  ▶ 5. Frontend Registration & Form Security Invariants (Criterion 7)
-    ✔ RegisterPage does not include role selection UI or hidden role inputs
-    ✔ LoginPage enforces real Supabase authentication check and forbids fake credentials
-  ✔ 5. Frontend Registration & Form Security Invariants (Criterion 7)
-  ▶ 6. Live Cloud Supabase Connection Status Audit
-    ✔ Reports actual Supabase environment status honestly (No fabricated live tests)
-  ✔ 6. Live Cloud Supabase Connection Status Audit
-✔ FraudShield AI — Milestone 2 Security Audit & Invariant Test Suite
-▶ Express Server HTTP Integration Test
-  ✔ GET /health returns 200 with service information
-  ✔ GET /api/v1/auth/health returns 200 with auth status
-  ✔ GET /api/v1/personal/overview without token is rejected
-  ✔ GET /unknown-route returns 404 NotFound
-✔ Express Server HTTP Integration Test
-
-ℹ tests 25
-ℹ suites 8
-ℹ pass 25
-ℹ fail 0
-```
-**Result: 25/25 tests PASSED (0 failures, 0 warnings).**
-
-### Frontend Build & Route Render Suite
-```text
-✓ 2122 modules transformed.
-dist/index.html                   1.08 kB │ gzip:   0.59 kB
-dist/assets/index-C1GAgCzT.css   32.91 kB │ gzip:   6.50 kB
-dist/assets/index-COFhSb1x.js   603.78 kB │ gzip: 168.61 kB
-✓ built in 2.53s
-
-[PASS] Landing Page        -> /             (57,198 bytes HTML)
-[PASS] Features Page       -> /features     (61,563 bytes HTML)
-[PASS] How It Works Page   -> /how-it-works (31,716 bytes HTML)
-[PASS] Login Screen        -> /login        (17,348 bytes HTML)
-[PASS] Registration Screen -> /register     (19,498 bytes HTML)
-[PASS] Not Found Page      -> /404          (14,243 bytes HTML)
-Summary: 6 routes PASSED, 0 routes FAILED
-```
-**Result: 100% routes passed.**
-
----
-
-## 4. User Configuration Instructions (Connecting Live Supabase)
-
-To connect the application to your live Supabase project:
-1. In your Supabase Dashboard:
-   - Navigate to the **SQL Editor**.
-   - Paste and execute `supabase/migrations/001_auth_and_profiles.sql`.
-2. Configure **Frontend**:
-   - Create `frontend/.env` with:
-     ```env
-     VITE_SUPABASE_URL=https://<your-project-id>.supabase.co
-     VITE_SUPABASE_ANON_KEY=<your-public-anon-key>
-     VITE_API_URL=http://localhost:5000/api/v1
-     ```
-3. Configure **Backend**:
-   - Create `backend/.env` with:
-     ```env
-     PORT=5000
-     FRONTEND_URL=http://localhost:5173
-     SUPABASE_URL=https://<your-project-id>.supabase.co
-     SUPABASE_SERVICE_ROLE_KEY=<your-service-role-secret-key>
-     ```
-*(Until these keys are added, both frontend and backend safely report the missing configuration without pretending authentication has succeeded).*
+Whenever you wish to run the live cloud tests:
+1. Open your **Supabase Dashboard** -> **SQL Editor**.
+2. Run [`supabase/migrations/001_auth_and_profiles.sql`](./supabase/migrations/001_auth_and_profiles.sql).
+3. Create `backend/.env` with your project keys:
+   ```env
+   PORT=5000
+   FRONTEND_URL=http://localhost:5173
+   SUPABASE_URL=https://<your-project-id>.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+   ```
+4. Create `frontend/.env` with:
+   ```env
+   VITE_SUPABASE_URL=https://<your-project-id>.supabase.co
+   VITE_SUPABASE_ANON_KEY=<your-anon-key>
+   VITE_API_URL=http://localhost:5000/api/v1
+   ```
+5. Run the live verification diagnostic:
+   ```bash
+   cd backend
+   node scripts/verify_live_supabase.js
+   ```
