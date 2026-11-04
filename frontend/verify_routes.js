@@ -41,3 +41,4 @@ if (failed > 0) {
 } else {
   console.log('All public routes rendered without errors!');
 }
+

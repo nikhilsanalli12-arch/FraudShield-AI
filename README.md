@@ -24,14 +24,23 @@ FraudShield AI is a unified, institutional-grade AI-powered financial safety and
 React + Vite Frontend (Tailwind CSS, Lucide, Recharts, React Flow)
         │
         ▼
-Node.js + Express API Gateway (Zod validation, RBAC, SSRF defense)
+Node.js + Express API Gateway (Zod validation, Supabase JWT auth, RBAC, Helmet, CORS)
         │
         ▼
 Python FastAPI Microservice (Scikit-Learn, Isolation Forest, NetworkX, SHAP)
         │
         ▼
-Supabase PostgreSQL (Row Level Security, Auth, Storage)
+Supabase PostgreSQL (Row Level Security, Auth, Anti-Tampering Triggers)
 ```
+
+---
+
+## Role-Based Access Control & Security Model
+
+- **Public Registrations**: Always receive the `personal` role by default. Client metadata roles are explicitly ignored by database triggers.
+- **Role Promotion**: Analyst and Admin roles are granted strictly through trusted administrative operations or direct SQL updates (`supabase/seed.sql`).
+- **Row Level Security**: Users can only query and modify their own non-role profile fields (`auth.uid() = id`).
+- **Backend Validation**: The Express backend verifies tokens directly via Supabase Auth (`supabase.auth.getUser()`) and queries the verified role from `public.profiles` using the service role key.
 
 ---
 
@@ -39,39 +48,46 @@ Supabase PostgreSQL (Row Level Security, Auth, Storage)
 
 ### Prerequisites
 - **Node.js**: v20+ (v24.15.0 verified)
-- **npm**: v10+ (v11.12.1 verified)
-- **Python**: v3.11+ (v3.15.0 / v3.14.4 verified)
-- **Git**: Isolated local repository initialized
+- **npm**: v10+ (npm 11.12.1 verified)
+- **Python**: v3.11+ (Python 3.15.0 / 3.14.4 verified)
+- **Supabase**: Cloud project or local Supabase CLI
 
-### Quickstart
+### 1. Database Setup
+Execute the migration located in [`supabase/migrations/001_auth_and_profiles.sql`](./supabase/migrations/001_auth_and_profiles.sql) in your Supabase SQL Editor.
 
-1. **Clone & Configure Environment**:
-   ```bash
-   cp .env.example .env
-   ```
+### 2. Frontend Setup
+```bash
+cd frontend
+npm install
+# Create frontend/.env with:
+# VITE_SUPABASE_URL=https://your-project.supabase.co
+# VITE_SUPABASE_ANON_KEY=your-supabase-public-anon-key
+# VITE_API_URL=http://localhost:5000/api/v1
+npm run dev
+```
 
-2. **Frontend Setup**:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
+### 3. Backend Setup
+```bash
+cd backend
+npm install
+# Create backend/.env with:
+# PORT=5000
+# FRONTEND_URL=http://localhost:5173
+# SUPABASE_URL=https://your-project.supabase.co
+# SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+npm run dev
+# Run automated security & role tests:
+npm test
+```
 
-3. **Backend Setup** *(Milestone 2+)*:
-   ```bash
-   cd backend
-   npm install
-   npm run dev
-   ```
-
-4. **AI Service Setup** *(Milestone 6+)*:
-   ```bash
-   cd ai-service
-   python -m venv .venv
-   source .venv/bin/activate  # Or on Windows: .venv\Scripts\activate
-   pip install -r requirements.txt
-   python run.py
-   ```
+### 4. AI Service Setup *(Milestone 6+)*
+```bash
+cd ai-service
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python run.py
+```
 
 ---
 
@@ -87,4 +103,3 @@ Supabase PostgreSQL (Row Level Security, Auth, Storage)
 ## Project Status
 
 For real-time development tracking, milestone completions, test evidence, and known considerations, refer to [`PROJECT_STATUS.md`](./PROJECT_STATUS.md).
-

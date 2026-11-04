@@ -5,18 +5,21 @@ import {
   Menu,
   X,
   ArrowRight,
-  Lock,
   Layers,
   HelpCircle,
-  ExternalLink,
   Cpu,
+  LogOut,
+  User,
+  LayoutDashboard,
 } from 'lucide-react';
 import Button from '../common/Button';
 import Badge from '../common/Badge';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { user, role, signOut, isConfigured } = useAuth();
 
   const navLinks = [
     { name: 'Features', path: '/features', icon: Layers },
@@ -29,6 +32,12 @@ export default function Navbar() {
       return location.pathname + location.hash === path;
     }
     return location.pathname === path;
+  };
+
+  const getDashboardPath = () => {
+    if (role === 'admin') return '/admin/dashboard';
+    if (role === 'analyst') return '/analyst/dashboard';
+    return '/dashboard';
   };
 
   return (
@@ -78,21 +87,45 @@ export default function Navbar() {
 
           {/* Desktop Action Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Badge variant="neutral" size="sm" dot>
-              Demo Preview
-            </Badge>
-            <Button to="/login" variant="ghost" size="sm">
-              Sign In
-            </Button>
-            <Button
-              to="/register"
-              variant="navy"
-              size="sm"
-              icon={ArrowRight}
-              iconPosition="right"
-            >
-              Get Protected
-            </Button>
+            {user ? (
+              <div className="flex items-center gap-3">
+                <Badge variant={role === 'admin' ? 'navy' : role === 'analyst' ? 'purple' : 'brand'} size="sm" dot>
+                  {role ? role.toUpperCase() : 'PERSONAL'}
+                </Badge>
+                <Button
+                  to={getDashboardPath()}
+                  variant="primary"
+                  size="sm"
+                  icon={LayoutDashboard}
+                >
+                  Dashboard
+                </Button>
+                <Button
+                  onClick={signOut}
+                  variant="ghost"
+                  size="sm"
+                  icon={LogOut}
+                  title="Sign Out"
+                >
+                  Sign Out
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Button to="/login" variant="ghost" size="sm">
+                  Sign In
+                </Button>
+                <Button
+                  to="/register"
+                  variant="navy"
+                  size="sm"
+                  icon={ArrowRight}
+                  iconPosition="right"
+                >
+                  Get Protected
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Mobile Menu Hamburger */}
@@ -135,30 +168,57 @@ export default function Navbar() {
           </div>
 
           <div className="pt-4 border-t border-slate-100 flex flex-col gap-2.5">
-            <div className="flex items-center justify-between px-2 text-xs text-slate-500">
-              <span>Environment Status</span>
-              <Badge variant="neutral" size="sm" dot>
-                Demo Mode Active
-              </Badge>
-            </div>
-            <Button
-              to="/login"
-              variant="secondary"
-              className="w-full justify-center"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Sign In
-            </Button>
-            <Button
-              to="/register"
-              variant="navy"
-              className="w-full justify-center"
-              icon={ArrowRight}
-              iconPosition="right"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Get Protected
-            </Button>
+            {user ? (
+              <>
+                <div className="flex items-center justify-between px-2 text-xs text-slate-600">
+                  <span>Logged in as: {user.email}</span>
+                  <Badge variant="brand" size="sm">
+                    {role || 'personal'}
+                  </Badge>
+                </div>
+                <Button
+                  to={getDashboardPath()}
+                  variant="primary"
+                  className="w-full justify-center"
+                  icon={LayoutDashboard}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Go to Dashboard
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="w-full justify-center"
+                  icon={LogOut}
+                  onClick={() => {
+                    signOut();
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  to="/login"
+                  variant="secondary"
+                  className="w-full justify-center"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Sign In
+                </Button>
+                <Button
+                  to="/register"
+                  variant="navy"
+                  className="w-full justify-center"
+                  icon={ArrowRight}
+                  iconPosition="right"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Get Protected
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}

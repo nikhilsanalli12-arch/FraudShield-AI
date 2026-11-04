@@ -1,7 +1,7 @@
 # FraudShield AI — Project Status
 
-**Current Milestone:** Milestone 1 (Foundation, Design System & Public Experience) — **COMPLETED**  
-**Next Milestone:** Milestone 2 (Authentication, Supabase and Role-Based Routing) — *Pending User Review*  
+**Current Milestone:** Milestone 2 (Authentication, Supabase and Role-Based Routing) — **COMPLETED**  
+**Next Milestone:** Milestone 3 (Personal and Analyst Dashboards) — *Pending User Review*  
 **Last Updated:** 2026-11-04  
 
 ---
@@ -11,8 +11,8 @@
 | Milestone | Scope | Status | Notes |
 | :--- | :--- | :--- | :--- |
 | **Milestone 1** | Project setup, architecture, design system, landing page, public routes | **COMPLETED** | Verified across all 5 public routes + 404 handler, responsive design, 0 build errors. |
-| **Milestone 2** | Authentication, Supabase and role-based routing | **PENDING** | Ready to begin upon user approval. |
-| **Milestone 3** | Personal and analyst dashboards | Pending | - |
+| **Milestone 2** | Authentication, Supabase and role-based routing | **COMPLETED** | Real Supabase Auth, PostgreSQL migration with RLS & self-escalation defenses, Express auth & role middleware, 16 automated tests passed. |
+| **Milestone 3** | Personal and analyst dashboards | **PENDING** | Ready to begin upon user approval. |
 | **Milestone 4** | Database schema, RLS and transaction foundation | Pending | - |
 | **Milestone 5** | CSV upload and transaction management | Pending | - |
 | **Milestone 6** | Fraud detection and ML integration | Pending | - |
@@ -25,98 +25,138 @@
 
 ---
 
-## 2. Completed Work (Milestone 1)
+## 2. Completed Work (Milestone 2)
 
-### Phase 1: Environment & Repository Foundation
-- [x] Initialized and verified local Git repository directly inside `FraudShield-AI` (`master` branch).
-- [x] Confirmed repository path isolation (`C:/Users/Nikhikumar s/OneDrive/Documents/FraudShield-AI`).
-- [x] Created enterprise-grade `.gitignore` covering Node, Python virtual environments, build outputs (`dist/`, `dist-ssr/`), and sensitive secrets (`.env*`).
-- [x] Created consolidated `.env.example` segregating public Vite client variables and sensitive backend/AI keys.
-- [x] Verified system runtimes: Node.js `v24.15.0`, npm `11.12.1`, Python `3.15.0`, Pip `26.2.1`.
-- [x] Created modular placeholder READMEs for `backend/`, `ai-service/`, and `supabase/`.
+### Phase 1: Database Migration & Role Invariants
+- [x] Created `supabase/migrations/001_auth_and_profiles.sql`:
+  - `public.profiles` table linked to `auth.users(id) on delete cascade` with `role text check (role in ('personal', 'analyst', 'admin'))`.
+  - Enabled Row Level Security (RLS) on `public.profiles`.
+  - Non-recursive RLS policies: Users can `SELECT` and `UPDATE` only their own row (`auth.uid() = id`).
+  - **Self-Escalation Defense Trigger (`handle_new_user`)**: All public sign-ups strictly receive `'personal'`. Any role parameter supplied in registration metadata is ignored.
+  - **Anti-Tampering Trigger (`prevent_profile_role_update`)**: Non-service-role updates to the `role` column throw an unauthorized exception.
+  - Set `security definer` with safe `set search_path = public` on all database functions and revoked execution from public.
+- [x] Created `supabase/seed.sql` documenting trusted administrative role promotion commands.
 
-### Phase 2: Design System & Reusable Components
-- [x] Configured Tailwind CSS (`tailwind.config.js` and `postcss.config.js`) with custom fintech palettes:
-  - Deep Navy (`navy-900`, `navy-950`)
-  - Brand Royal Indigo/Blue (`brand-500` through `brand-950`)
-  - Verified Emerald, Caution Amber, Warning Rose, and Intelligence Violet
-  - Custom subtle elevation shadows and typography scales (`Inter` + `JetBrains Mono`)
-- [x] Built core reusable UI component library in `src/components/common/`:
-  - `Button.jsx`: Variants (`primary`, `secondary`, `navy`, `outline`, `ghost`, `danger`, `success`), sizes, loading states, icons.
-  - `Card.jsx`: `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, hover elevation.
-  - `Badge.jsx`: Color variants, size options, animated pulsing indicator dots.
-  - `MetricCard.jsx`: Tabular typography, trend indicators, icon backdrops, loading skeletons.
-- [x] Built responsive navigation shell in `src/components/navigation/`:
-  - `Navbar.jsx`: Brand identity, desktop links with active states, demo mode indicators, mobile drawer.
-  - `Footer.jsx`: Institutional fintech footer, module directory, architecture links, explicit statutory disclosures.
-- [x] Built layout container: `src/layouts/PublicLayout.jsx`.
+### Phase 2: Backend Authentication Gateway (Express REST API)
+- [x] Scaffolded `backend/package.json` with 0 vulnerabilities (`express`, `helmet`, `cors`, `dotenv`, `@supabase/supabase-js`, `zod`, `morgan`).
+- [x] Built `backend/src/config/supabase.js` initializing the trusted admin client using `SUPABASE_SERVICE_ROLE_KEY`.
+- [x] Built `backend/src/middleware/authMiddleware.js`:
+  - Extracts Bearer token from `Authorization` header.
+  - Validates token against Supabase Auth (`supabaseAdmin.auth.getUser(token)`).
+  - Queries `public.profiles` via database admin client to fetch verified user role (never trusts client headers).
+  - Never logs tokens, passwords, or secrets.
+  - Returns structured `401 Unauthorized` for missing, empty, or expired tokens, and `503 ServiceUnavailable` if Supabase credentials are missing on the backend.
+- [x] Built `backend/src/middleware/roleGuard.js`:
+  - Enforces role requirements (e.g. `requireRole(['analyst', 'admin'])`).
+  - Returns structured `403 Forbidden` with current role and required roles.
+- [x] Created Express routes:
+  - `GET /health` and `GET /api/v1/auth/health`
+  - `GET /api/v1/auth/me` (Protected: returns authenticated user and database role)
+  - `GET /api/v1/personal/overview` (Accessible by: `personal`, `analyst`, `admin`)
+  - `GET /api/v1/analyst/queue` (Accessible by: `analyst`, `admin`)
+  - `GET /api/v1/admin/audit` (Accessible strictly by: `admin`)
 
-### Phase 3: Public Experience & Educational Pages
-- [x] **Landing Page (`/`)**:
-  - Hero with official brand tagline: *"Your transactions. Your security. Your control."*
-  - Interactive Central Safety Hub: *"What would you like to check?"* with tabbed quick-inspect portals for all 5 core modules.
-  - 6-module comprehensive interactive feature showcase.
-  - Security Architecture & Integrity principles (SSRF defense, deterministic math, zero credential collection).
-  - Role-based stakeholder workflows (Personal, Analyst, Admin).
-  - Clean CTA sections with synthetic preview banners.
-- [x] **Features Page (`/features`)**:
-  - Detailed module-by-module breakdown of Modules A through G.
-  - Architectural blueprint tier breakdown (`#architecture`).
-  - Strict algorithmic limitation notices for each module.
-- [x] **How It Works Page (`/how-it-works`)**:
-  - 4-stage pipeline walkthrough (Ingestion, Deterministic Rules, AI Inference, SHAP Explainability).
-  - Deterministic Math Policy explanation (why LLMs never compute compound loans).
-  - Server-Side Request Forgery (SSRF) defense architecture breakdown.
-  - 0–100 Calibrated Risk Index band breakdown with SHAP positive/negative contributor illustrations.
-  - Ethical standards, privacy guarantees, and controlled data retention policies.
-- [x] **Login Screen (`/login`)**:
-  - Interactive role selector (Personal, Analyst, Admin).
-  - Prominent demo mode banner.
-  - One-click demo credential autofill for all 3 persona roles.
-  - Password visibility toggle and simulated auth validation.
-- [x] **Registration Screen (`/register`)**:
-  - Account role selection (Personal vs Financial Analyst with authorization notices).
-  - Clean validation inputs (legal name, institution, email, matching passwords, terms agreement).
-  - Clear demo mode banner.
-- [x] **Not Found Page (`/404`)**:
-  - Accessible fallback page with redirect buttons back to Safety Hub and Features.
+### Phase 3: Frontend Supabase Integration & Route Guards
+- [x] Installed `@supabase/supabase-js` in `frontend/`.
+- [x] Built `frontend/src/services/supabaseClient.js`:
+  - Checks for active Supabase environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
+  - Detects placeholder or missing keys and safely exposes `isSupabaseConfigured()`.
+- [x] Built `frontend/src/context/AuthContext.jsx`:
+  - Session restoration on mount and reactive `onAuthStateChange` listener.
+  - Real `signUp`, `signInWithPassword`, `signOut`.
+  - Exposes `user`, `profile`, `role`, `loading`, `error`, `isConfigured`.
+- [x] Updated `LoginPage.jsx` & `RegisterPage.jsx`:
+  - Removed simulated authentication and dummy logins.
+  - Connected to real Supabase Auth methods.
+  - Prominent configuration notice if Supabase credentials are missing.
+  - Strict role security notice on registration: all public accounts provisioned as `personal`.
+  - Password visibility toggle, min-length validation, matching check, and loading states.
+- [x] Built `ProtectedRoute.jsx` and `RoleGate.jsx`:
+  - Prevents protected views from rendering while session is resolving.
+  - Restricts access based on verified database role.
+- [x] Mounted minimal test placeholder pages in `App.jsx` for `/dashboard`, `/analyst/dashboard`, and `/admin/dashboard`.
 
 ---
 
 ## 3. Verification & Testing Evidence
 
-1. **Production Client Build**:
-   ```powershell
-   cd frontend; npm run build
-   # Output:
-   # vite v8.3.5 building client environment for production...
-   # ✓ 2072 modules transformed.
-   # dist/index.html                   1.08 kB │ gzip:   0.59 kB
-   # dist/assets/index-UEWLz0F5.css   32.34 kB │ gzip:   6.40 kB
-   # dist/assets/index-CFSw5POU.js   381.80 kB │ gzip: 112.26 kB
-   # ✓ built in 2.02s
-   ```
-   **Result: 0 errors, 0 warnings.**
+### Backend Security & Integration Test Suite (`npm test`)
+```text
+▶ FraudShield AI — Milestone 2 Security & Authorization Test Suite
+  ▶ 1. Database Security & Migration Invariant Verification
+    ✔ All public registrations must strictly receive "personal" role (Ignoring client metadata)
+    ✔ Anti-tampering trigger must block users from updating their own role column
+    ✔ Row Level Security (RLS) must be enabled on profiles with strict ownership isolation
+  ✔ 1. Database Security & Migration Invariant Verification
+  ▶ 2. Backend Auth Middleware Token Rejection Verification
+    ✔ Request with missing Authorization header is rejected with 401 Unauthorized
+    ✔ Request with empty Bearer token is rejected
+  ✔ 2. Backend Auth Middleware Token Rejection Verification
+  ▶ 3. Backend Role Guard Middleware Verification
+    ✔ Personal user CAN access personal endpoints
+    ✔ Personal user CANNOT access analyst endpoints (Returns 403 Forbidden)
+    ✔ Personal user CANNOT access administrator endpoints (Returns 403 Forbidden)
+    ✔ Financial Analyst CAN access analyst queue but CANNOT access admin endpoints
+    ✔ Administrator CAN access personal, analyst, and admin endpoints
+    ✔ Unauthenticated request rejected with 401 Unauthorized
+  ✔ 3. Backend Role Guard Middleware Verification
+  ▶ 4. Frontend Bundle Secret Exposure Verification
+    ✔ Client production build bundle does NOT contain service-role key or private secrets
+  ✔ 4. Frontend Bundle Secret Exposure Verification
+✔ FraudShield AI — Milestone 2 Security & Authorization Test Suite
+▶ Express Server HTTP Integration Test
+  ✔ GET /health returns 200 with service information
+  ✔ GET /api/v1/auth/health returns 200 with auth status
+  ✔ GET /api/v1/personal/overview without token is rejected
+  ✔ GET /unknown-route returns 404 NotFound
+✔ Express Server HTTP Integration Test
 
-2. **Route Verification Suite (SSR Render Test)**:
-   ```powershell
-   node verify_routes.js
-   # Output:
-   # [PASS] Landing Page        -> /             (57,492 bytes HTML)
-   # [PASS] Features Page       -> /features     (61,857 bytes HTML)
-   # [PASS] How It Works Page   -> /how-it-works (32,010 bytes HTML)
-   # [PASS] Login Screen        -> /login        (18,851 bytes HTML)
-   # [PASS] Registration Screen -> /register     (20,134 bytes HTML)
-   # [PASS] Not Found Page      -> /404          (14,537 bytes HTML)
-   # Summary: 6 routes PASSED, 0 routes FAILED
-   ```
-   **Result: 100% routes passed.**
+ℹ tests 16
+ℹ suites 6
+ℹ pass 16
+ℹ fail 0
+```
+**Result: 16/16 tests PASSED (0 failures, 0 warnings).**
 
-3. **Vulnerability Audit**:
-   `found 0 vulnerabilities` across 108 npm dependencies.
+### Frontend Build & Route Render Suite
+```text
+✓ 2122 modules transformed.
+dist/index.html                   1.08 kB │ gzip:   0.59 kB
+dist/assets/index-C1GAgCzT.css   32.91 kB │ gzip:   6.50 kB
+dist/assets/index-COFhSb1x.js   603.78 kB │ gzip: 168.61 kB
+✓ built in 1.51s
+
+[PASS] Landing Page        -> /             (57,198 bytes HTML)
+[PASS] Features Page       -> /features     (61,563 bytes HTML)
+[PASS] How It Works Page   -> /how-it-works (31,716 bytes HTML)
+[PASS] Login Screen        -> /login        (17,348 bytes HTML)
+[PASS] Registration Screen -> /register     (19,498 bytes HTML)
+[PASS] Not Found Page      -> /404          (14,243 bytes HTML)
+Summary: 6 routes PASSED, 0 routes FAILED
+```
+**Result: 100% routes passed.**
 
 ---
 
-## 4. Known Considerations & Next Milestone Requirements
+## 4. User Configuration Instructions (Connecting Live Supabase)
 
-- **Milestone 2 Transition**: In Milestone 2, we will integrate Supabase Client (`@supabase/supabase-js`), configure backend Express JWT authentication middleware, implement server-side Role-Based Access Control (RBAC), and mount protected route wrappers (`ProtectedRoute`, `RoleGate`) for personal, analyst, and admin portals.
+To connect the application to your live Supabase project:
+1. In your Supabase Dashboard:
+   - Navigate to the **SQL Editor**.
+   - Paste and execute `supabase/migrations/001_auth_and_profiles.sql`.
+2. Configure **Frontend**:
+   - Create `frontend/.env` with:
+     ```env
+     VITE_SUPABASE_URL=https://your-project-id.supabase.co
+     VITE_SUPABASE_ANON_KEY=your-supabase-public-anon-key
+     VITE_API_URL=http://localhost:5000/api/v1
+     ```
+3. Configure **Backend**:
+   - Create `backend/.env` with:
+     ```env
+     PORT=5000
+     FRONTEND_URL=http://localhost:5173
+     SUPABASE_URL=https://your-project-id.supabase.co
+     SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+     ```
+*(Until these keys are added, both frontend and backend safely report the missing configuration without pretending authentication has succeeded).*

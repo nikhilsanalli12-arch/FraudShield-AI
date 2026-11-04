@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   ShieldCheck,
   Lock,
@@ -7,63 +7,49 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  Info,
-  UserCheck,
-  CheckCircle2,
-  Sparkles,
+  AlertCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import Button from '../../components/common/Button';
-import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../../components/common/Card';
+import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
+import { useAuth } from '../../context/AuthContext';
 
 export default function LoginPage() {
-  const [searchParams] = useSearchParams();
-  const initialRole = searchParams.get('role') || 'personal';
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { signIn, isConfigured, missingConfigs } = useAuth();
 
-  const [role, setRole] = useState(initialRole);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [demoNotice, setDemoNotice] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(null);
 
-  const demoAccounts = {
-    personal: {
-      email: 'alex.morgan@fraudshield.demo',
-      name: 'Alex Morgan (Personal User)',
-      desc: 'Access personal transactions, link scanner, app auditor, and loan calculator.',
-    },
-    analyst: {
-      email: 'sarah.chen@fraudshield.demo',
-      name: 'Sarah Chen (Financial Analyst)',
-      desc: 'Access fraud queue, multi-account graph radar, model metrics, and simulator.',
-    },
-    admin: {
-      email: 'admin.ops@fraudshield.demo',
-      name: 'DevOps Administrator',
-      desc: 'Access audit logs, role management, model deployment versions, and system settings.',
-    },
-  };
+  const from = location.state?.from?.pathname || '/dashboard';
 
-  const handleQuickFill = (selectedRole) => {
-    setRole(selectedRole);
-    setEmail(demoAccounts[selectedRole].email);
-    setPassword('DemoSafePass123!');
-    setDemoNotice(`Loaded credentials for ${demoAccounts[selectedRole].name}`);
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setDemoNotice(null);
+    setErrorMessage(null);
 
-    // Simulate demo authentication
-    setTimeout(() => {
-      setLoading(false);
-      setDemoNotice(
-        `[Demo Mode Verified] Authentication validated for ${role.toUpperCase()} role. Full Supabase Auth backend connects in Milestone 2.`
+    if (!isConfigured) {
+      setErrorMessage(
+        `Supabase authentication credentials are required before signing in. Please set ${missingConfigs.join(' and ')} in your environment file.`
       );
-    }, 700);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const data = await signIn(email, password);
+      // Navigation is triggered upon successful Supabase response
+      navigate(from, { replace: true });
+    } catch (err) {
+      setErrorMessage(err.message || 'Authentication failed. Please verify your credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -83,67 +69,30 @@ export default function LoginPage() {
             Sign in to your account
           </h2>
           <p className="text-xs text-slate-500">
-            Select your role or try our one-click interactive demo accounts below.
+            Enter your verified credentials to access your financial safety workspace.
           </p>
         </div>
 
-        {/* Demo Mode Notice Banner */}
-        <div className="p-3.5 rounded-xl bg-brand-50 border border-brand-200 text-xs text-brand-900 space-y-1">
-          <div className="flex items-center gap-1.5 font-semibold text-brand-700">
-            <Sparkles className="w-4 h-4 text-brand-600" />
-            Interactive Demo Mode Active
+        {/* Configuration Notice (If Supabase keys are not yet configured) */}
+        {!isConfigured && (
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
+            <div className="flex items-center gap-2 font-bold text-amber-800">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              Supabase Configuration Required
+            </div>
+            <p className="text-amber-700 leading-relaxed">
+              Real authentication is active. To connect to your Supabase project, provide the following variables in <code className="bg-amber-100 px-1 py-0.5 rounded font-mono">frontend/.env</code>:
+            </p>
+            <ul className="list-disc list-inside font-mono text-[11px] text-amber-900 space-y-0.5 bg-amber-100/60 p-2 rounded">
+              {missingConfigs.map((cfg) => (
+                <li key={cfg}>{cfg}</li>
+              ))}
+            </ul>
           </div>
-          <p className="text-slate-600 leading-relaxed">
-            Live Supabase Auth and database RLS are scheduled for <strong>Milestone 2</strong>. Use the demo quick-fill buttons below to preview role-based access.
-          </p>
-        </div>
-
-        {/* Role Selector Tabs */}
-        <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/70 rounded-xl text-xs font-semibold">
-          <button
-            type="button"
-            onClick={() => handleQuickFill('personal')}
-            className={`py-2 rounded-lg transition-all ${
-              role === 'personal'
-                ? 'bg-white text-navy-950 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Personal
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickFill('analyst')}
-            className={`py-2 rounded-lg transition-all ${
-              role === 'analyst'
-                ? 'bg-white text-navy-950 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Analyst
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickFill('admin')}
-            className={`py-2 rounded-lg transition-all ${
-              role === 'admin'
-                ? 'bg-white text-navy-950 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Admin
-          </button>
-        </div>
+        )}
 
         {/* Login Card */}
         <Card className="shadow-card border-slate-200 p-6 sm:p-8 space-y-5">
-          <div className="text-xs text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-200/70">
-            <span className="font-semibold text-slate-700 block mb-0.5">
-              Active Role: {role.toUpperCase()}
-            </span>
-            {demoAccounts[role].desc}
-          </div>
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -167,9 +116,6 @@ export default function LoginPage() {
                 <label className="block text-xs font-semibold text-slate-700">
                   Password
                 </label>
-                <span className="text-xs text-brand-600 hover:underline cursor-pointer">
-                  Forgot password?
-                </span>
               </div>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -192,53 +138,30 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {errorMessage && (
+              <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
             <Button
               type="submit"
               variant="navy"
               className="w-full justify-center shadow-md"
               loading={loading}
+              disabled={!isConfigured || loading}
               icon={ArrowRight}
               iconPosition="right"
             >
-              Sign In (Demo Preview)
+              Sign In
             </Button>
           </form>
 
-          {demoNotice && (
-            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-start gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-              <span>{demoNotice}</span>
-            </div>
-          )}
-
-          {/* Quick Demo Pre-Fill Action */}
-          <div className="pt-2 border-t border-slate-100 space-y-2">
-            <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">
-              One-Click Demo Fill:
+          <div className="pt-2 border-t border-slate-100 text-center">
+            <span className="text-[11px] text-slate-500">
+              Personal role assigned by default. Analyst & Admin roles require authorized administrative provisioning.
             </span>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('personal')}
-                className="text-xs px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-              >
-                Personal User
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('analyst')}
-                className="text-xs px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-              >
-                Analyst
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('admin')}
-                className="text-xs px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-              >
-                Admin
-              </button>
-            </div>
           </div>
         </Card>
 
@@ -246,7 +169,7 @@ export default function LoginPage() {
         <p className="text-center text-xs text-slate-500">
           Don't have an account?{' '}
           <Link to="/register" className="font-semibold text-brand-600 hover:underline">
-            Create an account
+            Register for access
           </Link>
         </p>
       </div>
