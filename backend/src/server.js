@@ -2,6 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
+import { fileURLToPath } from 'url';
 import { config, isSupabaseConfigured } from './config/environment.js';
 import authRoutes from './routes/authRoutes.js';
 import protectedTestRoutes from './routes/protectedTestRoutes.js';
@@ -15,10 +16,9 @@ app.use(helmet());
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, or same-server tests)
+      // Allow requests with no origin (e.g. server-to-server, curl, or automated test runners)
       if (!origin) return callback(null, true);
 
-      // Match configured frontend URL or localhost development ports
       const allowedOrigins = [
         config.frontendUrl,
         'http://localhost:5173',
@@ -28,7 +28,7 @@ app.use(
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
+      return callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -37,7 +37,7 @@ app.use(
 );
 
 // 3. Sanitized Structured Logging
-// Never log Authorization headers or sensitive tokens
+// Explicitly never logs Authorization headers or sensitive tokens
 app.use(
   morgan((tokens, req, res) => {
     return [
@@ -51,7 +51,7 @@ app.use(
   })
 );
 
-// 4. Request Body Parsing
+// 4. Request Body Parsing with strict limit
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
@@ -87,7 +87,6 @@ app.use((err, req, res, next) => {
 });
 
 // Boot Server if invoked directly as the entry point
-import { fileURLToPath } from 'url';
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 
 if (isMain) {

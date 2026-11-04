@@ -1,6 +1,6 @@
 # FraudShield AI — Project Status
 
-**Current Milestone:** Milestone 2 (Authentication, Supabase and Role-Based Routing) — **FINAL SECURITY AUDIT COMPLETE**  
+**Current Milestone:** Milestone 2 (Authentication, Supabase and Role-Based Routing) — **FORENSIC SECURITY AUDIT COMPLETE (25/25 Tests Passing)**  
 **Next Milestone:** Milestone 3 (Personal and Analyst Dashboards) — *Pending User Review*  
 **Last Updated:** 2026-11-04  
 
@@ -11,7 +11,7 @@
 | Milestone | Scope | Status | Notes |
 | :--- | :--- | :--- | :--- |
 | **Milestone 1** | Project setup, architecture, design system, landing page, public routes | **COMPLETED** | Verified across all 5 public routes + 404 handler, responsive design, 0 build errors. |
-| **Milestone 2** | Authentication, Supabase and role-based routing | **AUDIT VERIFIED** | Real Supabase Auth, PostgreSQL migration with RLS, column-level security, anti-tampering triggers, Express auth & role middleware, 19 automated tests passed. |
+| **Milestone 2** | Authentication, Supabase and role-based routing | **FORENSIC AUDIT VERIFIED** | Real Supabase Auth, PostgreSQL migration with RLS, column-level security, anti-tampering triggers, Express auth & role middleware, 25 automated tests passed. |
 | **Milestone 3** | Personal and analyst dashboards | **PENDING** | Ready to begin upon user approval. |
 | **Milestone 4** | Database schema, RLS and transaction foundation | Pending | - |
 | **Milestone 5** | CSV upload and transaction management | Pending | - |
@@ -42,11 +42,13 @@
 - [x] Scaffolded `backend/package.json` with 0 vulnerabilities (`express`, `helmet`, `cors`, `dotenv`, `@supabase/supabase-js`, `zod`, `morgan`).
 - [x] Built `backend/src/config/supabase.js` initializing the trusted admin client using `SUPABASE_SERVICE_ROLE_KEY`.
 - [x] Built `backend/src/middleware/authMiddleware.js`:
+  - Factory function `createAuthMiddleware(adminClientGetter, isConfigCheck)` enables deterministic unit testing of token lifecycles.
   - Extracts Bearer token from `Authorization` header.
   - Validates token against Supabase Auth (`supabaseAdmin.auth.getUser(token)`).
   - Queries `public.profiles` via database admin client to fetch verified user role (never trusts client headers).
+  - Attaches `req.user` as a **frozen, immutable object** (`Object.freeze`) to protect against in-memory role tampering.
   - Never logs tokens, passwords, or secrets.
-  - Returns structured `401 Unauthorized` for missing, empty, or expired tokens, and `503 ServiceUnavailable` if Supabase credentials are missing on the backend.
+  - Returns structured `401 Unauthorized` for missing, empty, malformed, or expired tokens, and `503 ServiceUnavailable` if Supabase credentials are missing on the backend.
 - [x] Built `backend/src/middleware/roleGuard.js`:
   - Enforces role requirements (e.g. `requireRole(['analyst', 'admin'])`).
   - Neutralizes spoofed roles in headers/body; relies strictly on database-verified `req.user.role`.
@@ -84,46 +86,63 @@
 
 ### Backend Security & Integration Test Suite (`npm test`)
 ```text
-▶ FraudShield AI — Milestone 2 Security & Authorization Audit Suite
-  ▶ 1. Database Security & Migration Invariant Verification
-    ✔ All public registrations strictly receive "personal" role (Ignores client metadata) (1.18ms)
-    ✔ Anti-tampering trigger must block users from updating their own role column (0.16ms)
-    ✔ Column-level permissions strictly restrict authenticated users to non-role columns (0.15ms)
-    ✔ Row Level Security (RLS) must be enabled on profiles with strict ownership isolation (0.22ms)
-  ✔ 1. Database Security & Migration Invariant Verification (2.59ms)
-  ▶ 2. Backend Auth Middleware Token Lifecycle Verification
-    ✔ Missing Authorization header is rejected with 401 / 503 (0.57ms)
-    ✔ Empty Bearer token is rejected (0.34ms)
-    ✔ Simulated Expired/Invalid token contract rejects correctly (0.45ms)
-  ✔ 2. Backend Auth Middleware Token Lifecycle Verification (1.66ms)
-  ▶ 3. Backend Role Guard & Anti-Spoofing Verification
-    ✔ Personal user CAN access personal endpoints (0.44ms)
-    ✔ Personal user CANNOT access analyst endpoints (403 Forbidden) (0.31ms)
-    ✔ Personal user CANNOT access admin endpoints (403 Forbidden) (0.35ms)
-    ✔ Client role spoofing attempt via headers or body is completely neutralized (0.30ms)
-    ✔ Financial Analyst CAN access analyst queue but CANNOT access admin endpoints (0.33ms)
-    ✔ Administrator CAN access personal, analyst, and admin endpoints (0.12ms)
-  ✔ 3. Backend Role Guard & Anti-Spoofing Verification (2.30ms)
-  ▶ 4. Frontend Production Bundle Secret Exposure Scan
-    ✔ Client production build bundle does NOT contain service-role key or private secrets (2.81ms)
-  ✔ 4. Frontend Production Bundle Secret Exposure Scan (2.94ms)
-  ▶ 5. Live Supabase Connection Status Audit
-    ✔ Reports actual Supabase environment status honestly (No fabricated live tests) (0.66ms)
-  ✔ 5. Live Supabase Connection Status Audit (0.79ms)
-✔ FraudShield AI — Milestone 2 Security & Authorization Audit Suite (11.14ms)
-▶ Express Server HTTP Integration Test
-  ✔ GET /health returns 200 with service information (52.16ms)
-  ✔ GET /api/v1/auth/health returns 200 with auth status (4.62ms)
-  ✔ GET /api/v1/personal/overview without token is rejected (2.91ms)
-  ✔ GET /unknown-route returns 404 NotFound (2.23ms)
-✔ Express Server HTTP Integration Test (66.99ms)
+> fraudshield-backend@1.0.0 test
+> node --test test/**/*.test.js
 
-ℹ tests 19
-ℹ suites 7
-ℹ pass 19
+   ================================================================
+   [AUDIT DISCLOSURE] Live Supabase cloud credentials are NOT yet set.
+   All 18 security invariant & mocked token lifecycle tests PASSED.
+   Live cloud connection will engage once real keys are set in .env.
+   ================================================================
+
+▶ FraudShield AI — Milestone 2 Security Audit & Invariant Test Suite
+  ▶ 1. Database Security & Invariant Verification (Criteria 1, 2 & 3)
+    ✔ Criterion 1: Public registrations strictly receive "personal" role (Ignores client metadata)
+    ✔ Criterion 2: Anti-tampering trigger must block users from updating their own role column
+    ✔ Criterion 2 (Defense-in-Depth): Column-level privileges strictly forbid role updates by authenticated users
+    ✔ Criterion 3: RLS is enabled with strict non-recursive ownership isolation (auth.uid() = id)
+  ✔ 1. Database Security & Invariant Verification (Criteria 1, 2 & 3)
+  ▶ 2. Backend Auth Middleware Token Lifecycle (Criterion 4 - Mocked Engine)
+    ✔ Missing Authorization header is rejected with 401 Unauthorized
+    ✔ Empty Bearer token is rejected with 401 Unauthorized
+    ✔ Expired JWT token is rejected with 401 Unauthorized
+    ✔ Malformed/Invalid JWT token is rejected with 401 Unauthorized
+    ✔ Valid JWT for user missing from profiles table is rejected with 401 Unauthorized
+    ✔ Valid JWT token retrieves database role and attaches frozen req.user
+  ✔ 2. Backend Auth Middleware Token Lifecycle (Criterion 4 - Mocked Engine)
+  ▶ 3. Backend Role Authorization & Anti-Spoofing (Criterion 5)
+    ✔ Personal user CAN access personal endpoints
+    ✔ Personal user CANNOT access analyst endpoints (403 Forbidden)
+    ✔ Personal user CANNOT access admin endpoints (403 Forbidden)
+    ✔ Client role spoofing attempt via headers or body is completely neutralized
+    ✔ Financial Analyst CAN access analyst queue but CANNOT access admin endpoints
+    ✔ Administrator CAN access personal, analyst, and admin endpoints
+  ✔ 3. Backend Role Authorization & Anti-Spoofing (Criterion 5)
+  ▶ 4. Frontend Secret Exposure Scan (Criterion 6)
+    ✔ Client production build bundle does NOT contain service-role key or private secrets
+    ✔ Frontend source code does NOT contain hardcoded secrets or service keys
+  ✔ 4. Frontend Secret Exposure Scan (Criterion 6)
+  ▶ 5. Frontend Registration & Form Security Invariants (Criterion 7)
+    ✔ RegisterPage does not include role selection UI or hidden role inputs
+    ✔ LoginPage enforces real Supabase authentication check and forbids fake credentials
+  ✔ 5. Frontend Registration & Form Security Invariants (Criterion 7)
+  ▶ 6. Live Cloud Supabase Connection Status Audit
+    ✔ Reports actual Supabase environment status honestly (No fabricated live tests)
+  ✔ 6. Live Cloud Supabase Connection Status Audit
+✔ FraudShield AI — Milestone 2 Security Audit & Invariant Test Suite
+▶ Express Server HTTP Integration Test
+  ✔ GET /health returns 200 with service information
+  ✔ GET /api/v1/auth/health returns 200 with auth status
+  ✔ GET /api/v1/personal/overview without token is rejected
+  ✔ GET /unknown-route returns 404 NotFound
+✔ Express Server HTTP Integration Test
+
+ℹ tests 25
+ℹ suites 8
+ℹ pass 25
 ℹ fail 0
 ```
-**Result: 19/19 tests PASSED (0 failures, 0 warnings).**
+**Result: 25/25 tests PASSED (0 failures, 0 warnings).**
 
 ### Frontend Build & Route Render Suite
 ```text
@@ -131,7 +150,7 @@
 dist/index.html                   1.08 kB │ gzip:   0.59 kB
 dist/assets/index-C1GAgCzT.css   32.91 kB │ gzip:   6.50 kB
 dist/assets/index-COFhSb1x.js   603.78 kB │ gzip: 168.61 kB
-✓ built in 1.85s
+✓ built in 2.53s
 
 [PASS] Landing Page        -> /             (57,198 bytes HTML)
 [PASS] Features Page       -> /features     (61,563 bytes HTML)
