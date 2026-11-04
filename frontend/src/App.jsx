@@ -1,7 +1,12 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+
+// Layouts
 import PublicLayout from './layouts/PublicLayout';
+import DashboardLayout from './layouts/DashboardLayout';
+
+// Public Pages
 import LandingPage from './pages/public/LandingPage';
 import FeaturesPage from './pages/public/FeaturesPage';
 import HowItWorksPage from './pages/public/HowItWorksPage';
@@ -13,10 +18,10 @@ import NotFoundPage from './pages/public/NotFoundPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import RoleGate from './components/auth/RoleGate';
 
-// Milestone 2 Protected Test Placeholders
-import PersonalDashboardPlaceholder from './pages/placeholders/PersonalDashboardPlaceholder';
-import AnalystDashboardPlaceholder from './pages/placeholders/AnalystDashboardPlaceholder';
-import AdminDashboardPlaceholder from './pages/placeholders/AdminDashboardPlaceholder';
+// Milestone 3 Production Dashboards
+import PersonalDashboard from './pages/dashboard/PersonalDashboard';
+import AnalystDashboard from './pages/dashboard/AnalystDashboard';
+import AdminDashboard from './pages/dashboard/AdminDashboard';
 
 export default function App() {
   return (
@@ -31,40 +36,37 @@ export default function App() {
             <Route path="login" element={<LoginPage />} />
             <Route path="register" element={<RegisterPage />} />
             <Route path="404" element={<NotFoundPage />} />
+          </Route>
 
-            {/* Protected Routes (Milestone 2 Authorization Test Harness) */}
-            <Route
-              path="dashboard"
-              element={
-                <ProtectedRoute>
-                  <PersonalDashboardPlaceholder />
-                </ProtectedRoute>
-              }
-            />
+          {/* Authenticated Dashboard Layout */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="dashboard" element={<PersonalDashboard />} />
             <Route
               path="analyst/dashboard"
               element={
-                <ProtectedRoute>
-                  <RoleGate allowedRoles={['analyst', 'admin']}>
-                    <AnalystDashboardPlaceholder />
-                  </RoleGate>
-                </ProtectedRoute>
+                <RoleGate allowedRoles={['analyst', 'admin']}>
+                  <AnalystDashboard />
+                </RoleGate>
               }
             />
             <Route
               path="admin/dashboard"
               element={
-                <ProtectedRoute>
-                  <RoleGate allowedRoles={['admin']}>
-                    <AdminDashboardPlaceholder />
-                  </RoleGate>
-                </ProtectedRoute>
+                <RoleGate allowedRoles={['admin']}>
+                  <AdminDashboard />
+                </RoleGate>
               }
             />
-
-            {/* Catch-all */}
-            <Route path="*" element={<Navigate to="/404" replace />} />
           </Route>
+
+          {/* Catch-all */}
+          <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

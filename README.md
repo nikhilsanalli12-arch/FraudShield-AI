@@ -35,12 +35,17 @@ Supabase PostgreSQL (Row Level Security, Auth, Anti-Tampering Triggers)
 
 ---
 
-## Role-Based Access Control & Security Model
+## Role-Based Access Control & Dashboard Architecture
 
 - **Public Registrations**: Always receive the `personal` role by default. Client metadata roles are explicitly ignored by database triggers.
 - **Role Promotion**: Analyst and Admin roles are granted strictly through trusted administrative operations or direct SQL updates (`supabase/seed.sql`).
 - **Row Level Security**: Users can only query and modify their own non-role profile fields (`auth.uid() = id`).
 - **Backend Validation**: The Express backend verifies tokens directly via Supabase Auth (`supabase.auth.getUser()`) and queries the verified role from `public.profiles` using the service role key.
+- **Role-Guarded Dashboards**:
+  - `/dashboard` — **Personal User Portal**: Verifiable account security attributes, financial safety shortcuts (coming soon), and sample transaction previews.
+  - `/analyst/dashboard` — **Financial Analyst Portal**: Triage queue, read-only telemetry inspection, in-memory demo notes, and risk band velocity charts (`RoleGate: ['analyst', 'admin']`).
+  - `/admin/dashboard` — **Platform Administration**: Real backend gateway telemetry, PostgreSQL connection health, and server-side profile distribution counts (`RoleGate: ['admin']`).
+- **Privileged Backend API**: `/api/v1/admin/stats` protected by `authMiddleware` and `requireRole(['admin'])`.
 
 ---
 

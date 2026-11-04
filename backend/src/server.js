@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { config, isSupabaseConfigured } from './config/environment.js';
 import authRoutes from './routes/authRoutes.js';
 import protectedTestRoutes from './routes/protectedTestRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // 5. Mount API Routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1', protectedTestRoutes);
 
 // Root Health Endpoint
