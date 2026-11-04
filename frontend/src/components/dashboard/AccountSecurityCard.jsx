@@ -167,3 +167,4 @@ export default function AccountSecurityCard({ user, profile, session, role }) {
     </Card>
   );
 }
+

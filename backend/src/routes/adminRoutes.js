@@ -67,13 +67,13 @@ router.get('/stats', async (req, res) => {
       .select('*', { count: 'exact', head: true });
 
     if (totalErr) {
+      console.error('[AdminRoutes] Database query error:', totalErr.message);
       return res.json({
         gateway: gatewayStatus,
-        database: { status: 'error', message: totalErr.message },
+        database: { status: 'error' },
         users: {
           total: 'Not available',
           roles: { personal: 'Not available', analyst: 'Not available', admin: 'Not available' },
-          error: totalErr.message,
         },
         modules: moduleTelemetry,
       });
@@ -100,12 +100,13 @@ router.get('/stats', async (req, res) => {
       modules: moduleTelemetry,
     });
   } catch (err) {
+    console.error('[AdminRoutes] Unhandled telemetry exception:', err.message);
     return res.status(500).json({
       error: 'AdminTelemetryError',
       message: 'Failed to retrieve administrative statistics.',
-      details: err.message,
     });
   }
 });
 
 export default router;
+

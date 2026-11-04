@@ -12,3 +12,4 @@ export default function DemoBadge({ className = '', text = 'SYNTHETIC DEMO DATA'
     </span>
   );
 }
+

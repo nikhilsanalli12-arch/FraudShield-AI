@@ -148,3 +148,4 @@ export default function DashboardSidebar({ isMobileOpen, onCloseMobile }) {
     </>
   );
 }
+

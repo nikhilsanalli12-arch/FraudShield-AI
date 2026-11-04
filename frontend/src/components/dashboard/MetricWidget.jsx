@@ -57,3 +57,4 @@ export default function MetricWidget({
     </Card>
   );
 }
+

@@ -172,3 +172,4 @@ export const SYNTHETIC_7DAY_TREND = [
   { day: 'Day 6', totalVolume: 1610, flaggedAlerts: 29 },
   { day: 'Day 7', totalVolume: 1730, flaggedAlerts: 20 },
 ];
+
