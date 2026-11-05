@@ -20,8 +20,10 @@ import RoleGate from './components/auth/RoleGate';
 
 // Milestone 3 Production Dashboards
 import PersonalDashboard from './pages/dashboard/PersonalDashboard';
+import TransactionsPage from './pages/dashboard/TransactionsPage';
 import AnalystDashboard from './pages/dashboard/AnalystDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
+import LinkScannerPage from './pages/dashboard/LinkScannerPage';
 
 export default function App() {
   return (
@@ -47,6 +49,8 @@ export default function App() {
             }
           >
             <Route path="dashboard" element={<PersonalDashboard />} />
+            <Route path="dashboard/transactions" element={<TransactionsPage />} />
+            <Route path="dashboard/link-scanner" element={<LinkScannerPage />} />
             <Route
               path="analyst/dashboard"
               element={

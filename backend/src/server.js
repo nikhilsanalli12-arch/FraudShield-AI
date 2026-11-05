@@ -3,10 +3,13 @@ import helmet from 'helmet';
 import cors from 'cors';
 import morgan from 'morgan';
 import { fileURLToPath } from 'url';
-import { config, isSupabaseConfigured } from './config/environment.js';
+import { config, isSupabaseConfigured, isGeminiConfigured } from './config/environment.js';
 import authRoutes from './routes/authRoutes.js';
 import protectedTestRoutes from './routes/protectedTestRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import transactionRoutes from './routes/transactionRoutes.js';
+import analystRoutes from './routes/analystRoutes.js';
+import linkRoutes from './routes/linkRoutes.js';
 
 const app = express();
 
@@ -59,6 +62,9 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 // 5. Mount API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/transactions', transactionRoutes);
+app.use('/api/v1/analyst', analystRoutes);
+app.use('/api/v1/links', linkRoutes);
 app.use('/api/v1', protectedTestRoutes);
 
 // Root Health Endpoint
@@ -68,6 +74,7 @@ app.get('/health', (req, res) => {
     service: 'FraudShield AI Gateway',
     environment: config.nodeEnv,
     authConfigured: isSupabaseConfigured(),
+    geminiConfigured: isGeminiConfigured(),
   });
 });
 
@@ -95,6 +102,7 @@ if (isMain) {
   app.listen(config.port, () => {
     console.log(`[FraudShield Gateway] Running on http://localhost:${config.port}`);
     console.log(`[FraudShield Gateway] Supabase Auth Configured: ${isSupabaseConfigured()}`);
+    console.log(`[FraudShield Gateway] Gemini AI Configured: ${isGeminiConfigured()}`);
   });
 }
 

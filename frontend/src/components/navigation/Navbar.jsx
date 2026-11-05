@@ -35,8 +35,6 @@ export default function Navbar() {
   };
 
   const getDashboardPath = () => {
-    if (role === 'admin') return '/admin/dashboard';
-    if (role === 'analyst') return '/analyst/dashboard';
     return '/dashboard';
   };
 
@@ -44,11 +42,12 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Brand Logo */}
+          {/* Brand Logo: Navigates to user role dashboard when authenticated, or public landing page when unauthenticated */}
           <Link
-            to="/"
+            to={user ? getDashboardPath() : '/'}
             className="flex items-center gap-2.5 focus:outline-none group"
-            aria-label="FraudShield AI Home"
+            aria-label={user ? 'Go to Dashboard' : 'FraudShield AI Home'}
+            title={user ? 'Go to Dashboard' : 'FraudShield AI Home'}
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-700 to-navy-950 flex items-center justify-center text-white shadow-md shadow-brand-700/20 group-hover:scale-105 transition-transform">
               <ShieldCheck className="w-6 h-6 text-brand-300" />

@@ -1,361 +1,250 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   ShieldCheck,
+  ShieldAlert,
   Link as LinkIcon,
-  Smartphone,
-  Calculator,
-  TrendingUp,
+  CreditCard,
   UploadCloud,
   FileText,
-  AlertCircle,
-  Receipt,
-  Eye,
-  Info,
+  Sparkles,
+  ArrowRight,
+  Activity,
+  Shield,
+  Lock,
 } from 'lucide-react';
-import Card, { CardHeader, CardTitle, CardDescription, CardContent } from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
-import MetricWidget from '../../components/dashboard/MetricWidget';
-import AccountSecurityCard from '../../components/dashboard/AccountSecurityCard';
-import EmptyState from '../../components/dashboard/EmptyState';
-import DemoBadge from '../../components/dashboard/DemoBadge';
-import { SYNTHETIC_PERSONAL_TRANSACTIONS } from '../../services/syntheticData';
+
+/**
+ * Platform Architectural Roadmap & Safety Invariants:
+ * - Milestone 5: CSV bank statement upload and batch fraud scoring (Active in Production)
+ * - Milestone 7: Android APK malware & intrusive permission auditing (Scheduled Future Milestone)
+ * - Milestone 8: Predatory loan terms & hidden APR calculator (Scheduled Future Milestone)
+ * - Milestone 9: High-yield investment Ponzi scheme evaluator (Scheduled Future Milestone)
+ * Note: Only verified, active services are surfaced as available to end-users.
+ */
 
 export default function PersonalDashboard() {
-  const { user, profile, session, role } = useAuth();
-  const [showSyntheticTransactions, setShowSyntheticTransactions] = useState(false);
-  const [activeShortcutModal, setActiveShortcutModal] = useState(null);
+  const navigate = useNavigate();
+  const { user, profile, role } = useAuth();
 
   const effectiveRole = role || profile?.role || 'personal';
+  const displayName =
+    profile?.full_name ||
+    user?.user_metadata?.full_name ||
+    user?.email?.split('@')[0] ||
+    'User';
 
-  const shortcuts = [
+  // Available feature cards (strictly existing, functional services only)
+  const features = [
     {
-      id: 'links',
-      title: 'Scan Suspicious Link',
-      description: 'Phishing URL detection & domain trust scoring',
-      icon: LinkIcon,
-      milestone: 'Milestone 7',
-      details: 'Will analyze shortened links, homoglyph domains, and phishing payloads using heuristic feeds and threat intelligence.',
+      id: 'transaction-fraud',
+      title: 'Bank Transaction Fraud Detection',
+      badge: 'Live Protection',
+      badgeVariant: 'success',
+      icon: CreditCard,
+      description:
+        'Evaluate individual financial transactions in real time using deterministic heuristic rules (velocity bursts, extreme currency amounts, repeated attempts, and round numbers).',
+      actionLabel: 'Open Transaction Monitor',
+      onAction: () => navigate('/dashboard/transactions'),
     },
     {
-      id: 'apps',
-      title: 'Analyze App Permissions',
-      description: 'APK malware & excessive permission auditor',
-      icon: Smartphone,
-      milestone: 'Milestone 7',
-      details: 'Will inspect Android APK manifests for intrusive SMS, accessibility service, and overlay permissions.',
-    },
-    {
-      id: 'loans',
-      title: 'Check Loan Terms',
-      description: 'Predatory APR & hidden penalty fee calculator',
-      icon: Calculator,
-      milestone: 'Milestone 8',
-      details: 'Will calculate true Annual Percentage Rates (APR) and surface predatory amortization curves and hidden processing fees.',
-    },
-    {
-      id: 'investments',
-      title: 'Evaluate Investment',
-      description: 'Ponzi pattern & fraudulent return evaluator',
-      icon: TrendingUp,
-      milestone: 'Milestone 9',
-      details: 'Will assess guaranteed return promises against regulatory databases and historic Ponzi scheme patterns.',
-    },
-    {
-      id: 'statements',
-      title: 'Upload Bank Statement',
-      description: 'CSV transaction ingestion & anomaly scanning',
+      id: 'csv-analysis',
+      title: 'CSV Transaction Analysis',
+      badge: 'Batch Ingestion',
+      badgeVariant: 'success',
       icon: UploadCloud,
-      milestone: 'Milestone 5',
-      details: 'Will parse standardized bank statement exports and stage transaction records for fraud engine scoring.',
+      description:
+        'Upload standardized bank statement CSV exports (RFC 4180). Automatically sanitizes, validates formatting, eliminates duplicates, and scores all historical statement rows.',
+      actionLabel: 'Import Statement CSV',
+      onAction: () => navigate('/dashboard/transactions?action=import'),
     },
+    {
+      id: 'link-scanner',
+      title: 'Suspicious Link Scanner',
+      badge: 'Threat Inspection',
+      badgeVariant: 'success',
+      icon: LinkIcon,
+      description:
+        'Defensive zero-fetch static URL threat scanner. Detects lookalike homoglyphs, misleading multi-level subdomains, raw IP hostnames, and shortened URLs without visiting dangerous sites.',
+      actionLabel: 'Scan Suspicious Link',
+      onAction: () => navigate('/dashboard/link-scanner'),
+    },
+    {
+      id: 'ai-explanations',
+      title: 'AI-Powered Fraud Explanations',
+      badge: 'Google Gemini 3.8',
+      badgeVariant: 'brand',
+      icon: Sparkles,
+      description:
+        'Transparent, plain-English security breakdowns powered by Google Gemini AI. Translates technical heuristic flags into clear risk summaries and actionable defensive recommendations.',
+      actionLabel: 'Explore AI Insights',
+      onAction: () => navigate('/dashboard/transactions'),
+    },
+    {
+      id: 'pdf-reports',
+      title: 'PDF Security Reports',
+      badge: 'Audit Export',
+      badgeVariant: 'success',
+      icon: FileText,
+      description:
+        'Generate formal, tamper-evident PDF security reports containing defanged non-clickable URLs, deterministic risk scores, confirmed facts, observed indicators, and safety disclaimers.',
+      actionLabel: 'Download Security Report',
+      onAction: () => navigate('/dashboard/link-scanner'),
+    },
+    ...(effectiveRole === 'analyst' || effectiveRole === 'admin'
+      ? [
+          {
+            id: 'analyst-triage',
+            title: 'Analyst Investigation & Case Management',
+            badge: `Role: ${effectiveRole.toUpperCase()}`,
+            badgeVariant: 'brand',
+            icon: Activity,
+            description:
+              'Centralized compliance queue for financial fraud analysts. Review auto-opened high-risk cases, triage risk levels, assign investigators, and record audit decisions.',
+            actionLabel: 'Open Investigation Queue',
+            onAction: () => navigate('/analyst/dashboard'),
+          },
+        ]
+      : []),
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Welcome & Context Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 bg-white rounded-2xl border border-slate-200/90 shadow-sm">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-              Personal Financial Safety
-            </h1>
-            <Badge variant="brand" size="sm">
+    <div className="space-y-8 pb-12">
+      {/* 1. WELCOME SECTION */}
+      <section
+        aria-label="Welcome to FraudShield AI"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-navy-950 via-slate-900 to-navy-900 text-white p-6 sm:p-10 border border-slate-800 shadow-md"
+      >
+        {/* Subtle background ambient gradients */}
+        <div className="absolute top-0 right-0 -mt-16 -mr-16 w-80 h-80 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 -mb-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 max-w-3xl space-y-4">
+          {/* Status chips */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-brand-500/20 text-brand-300 border border-brand-500/30">
+              <Sparkles className="w-3.5 h-3.5 text-brand-300" />
+              AI-Powered Financial Defense
+            </span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              Active Protection
+            </span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-slate-800 text-slate-300 border border-slate-700">
               Role: {effectiveRole}
-            </Badge>
+            </span>
           </div>
-          <p className="text-xs text-slate-500">
-            Authenticated as <span className="font-mono text-slate-700 font-medium">{user?.email}</span>
-          </p>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            Supabase Session Active
-          </span>
-        </div>
-      </div>
-
-      {/* Section 1: Verifiable Account Security (No Arbitrary Score) */}
-      <AccountSecurityCard
-        user={user}
-        profile={profile}
-        session={session}
-        role={effectiveRole}
-      />
-
-      {/* Section 2: Metric Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricWidget
-          title="Account Status"
-          value="Protected"
-          subtitle="Supabase RLS active"
-          icon={ShieldCheck}
-          variant="success"
-        />
-        <MetricWidget
-          title="Active Alerts"
-          value="0"
-          subtitle="No current threats"
-          icon={AlertCircle}
-          variant="default"
-        />
-        <MetricWidget
-          title="Linked Accounts"
-          value="0"
-          subtitle="Milestone 5 integration"
-          icon={Receipt}
-          variant="default"
-          isPending
-        />
-        <MetricWidget
-          title="Generated Reports"
-          value="0"
-          subtitle="Milestone 10 integration"
-          icon={FileText}
-          variant="default"
-          isPending
-        />
-      </div>
-
-      {/* Section 3: Feature Shortcuts (Clearly Labeled "Coming Soon") */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
+          {/* Heading */}
           <div>
-            <h2 className="text-base font-bold text-slate-900">Financial Safety Tools</h2>
-            <p className="text-xs text-slate-500">
-              Module integrations scheduled in upcoming milestone releases.
+            <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
+              Welcome to FraudShield AI
+            </h1>
+            <p className="text-sm font-medium text-brand-300 mt-1">
+              Hello, {displayName} ({user?.email})
             </p>
           </div>
+
+          {/* Short Platform Introduction */}
+          <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+            FraudShield AI is an intelligent financial fraud detection and digital safety platform. We protect users and organizations against transaction fraud, deceptive phishing links, and account threats using real-time deterministic heuristic scoring combined with Google Gemini AI security analysis.
+          </p>
+
+          {/* Session Attributes */}
+          <div className="flex items-center gap-4 text-xs text-slate-400 pt-2 flex-wrap">
+            <span className="text-emerald-400 flex items-center gap-1.5 font-medium">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              Supabase Auth Connected
+            </span>
+            <span className="text-slate-600">•</span>
+            <span>Row Level Security (RLS) Active</span>
+            <span className="text-slate-600">•</span>
+            <span>Deterministic Scoring Engine v1</span>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. OUR FEATURES SECTION */}
+      <section aria-label="Our Features" className="space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-200 pb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-brand-600" />
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+                Our Features & What We Offer
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+              Select an existing security capability below to open its dedicated workflow.
+            </p>
+          </div>
+          <span className="text-xs font-semibold text-brand-700 bg-brand-50 border border-brand-200 px-3 py-1 rounded-full self-start sm:self-auto">
+            {features.length} Available Services
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {shortcuts.map((sc) => {
-            const Icon = sc.icon;
+        {/* Feature Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {features.map((feature) => {
+            const Icon = feature.icon;
             return (
               <div
-                key={sc.id}
-                onClick={() => setActiveShortcutModal(sc)}
-                className="group p-4 bg-white rounded-xl border border-slate-200 hover:border-brand-400 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+                key={feature.id}
+                className="group p-5 bg-white rounded-2xl border border-slate-200 hover:border-brand-400 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
               >
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="w-9 h-9 rounded-xl bg-slate-50 text-brand-600 border border-slate-200 flex items-center justify-center group-hover:bg-brand-50 transition-colors">
-                      <Icon className="w-4 h-4" />
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="w-11 h-11 rounded-xl bg-slate-50 group-hover:bg-brand-50 border border-slate-200 group-hover:border-brand-200 flex items-center justify-center transition-colors text-slate-700 group-hover:text-brand-600">
+                      <Icon className="w-5 h-5" />
                     </div>
-                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                      {sc.milestone}
-                    </span>
+                    <Badge variant={feature.badgeVariant} size="sm">
+                      {feature.badge}
+                    </Badge>
                   </div>
-                  <h3 className="text-sm font-bold text-slate-800 group-hover:text-brand-600 transition-colors">
-                    {sc.title}
+
+                  <h3 className="text-base font-bold text-slate-900 group-hover:text-brand-600 transition-colors">
+                    {feature.title}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                    {sc.description}
+
+                  <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                    {feature.description}
                   </p>
                 </div>
-                <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-brand-600 font-semibold">
-                  <span>View Roadmap Details</span>
-                  <span className="text-slate-400 group-hover:translate-x-0.5 transition-transform">→</span>
+
+                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    icon={ArrowRight}
+                    onClick={feature.onAction}
+                    className="text-xs font-semibold w-full justify-between"
+                  >
+                    <span>{feature.actionLabel}</span>
+                  </Button>
                 </div>
               </div>
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* Section 4: Transaction Activity Feed */}
-      <Card className="border-slate-200 shadow-sm">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <CardTitle className="text-base font-bold text-slate-900">
-                Recent Transaction Activity
-              </CardTitle>
-              <CardDescription className="text-xs text-slate-500">
-                Monitored financial debits, payments, and risk scores.
-              </CardDescription>
-            </div>
-            <Button
-              size="sm"
-              variant={showSyntheticTransactions ? 'secondary' : 'ghost'}
-              icon={Eye}
-              onClick={() => setShowSyntheticTransactions(!showSyntheticTransactions)}
-              className="text-xs self-start sm:self-auto"
-            >
-              {showSyntheticTransactions ? 'Hide Sample Preview' : 'Toggle Sample Preview'}
-            </Button>
+      {/* 3. SECURITY MESSAGE / FOOTER */}
+      <footer aria-label="Security Notice" className="pt-4">
+        <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-slate-600">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-brand-600 shrink-0" />
+            <span>
+              <strong>FraudShield AI Security Guarantee:</strong> All fraud risk scoring is evaluated deterministically using verified heuristics. AI explanations are advisory and never alter risk scores or access raw bank credentials.
+            </span>
           </div>
-        </CardHeader>
-        <CardContent>
-          {showSyntheticTransactions ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-2.5 rounded-lg bg-amber-50/70 border border-amber-200/80 text-xs text-amber-900">
-                <DemoBadge text="SYNTHETIC DEMO DATA" />
-                <span className="text-[11px] text-amber-800">
-                  Statement parsing and database persistence arrive in Milestone 4 & 5.
-                </span>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
-                    <tr>
-                      <th className="py-2.5 px-3">Date</th>
-                      <th className="py-2.5 px-3">Merchant</th>
-                      <th className="py-2.5 px-3">Category</th>
-                      <th className="py-2.5 px-3">Channel</th>
-                      <th className="py-2.5 px-3 text-right">Amount</th>
-                      <th className="py-2.5 px-3 text-center">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium">
-                    {SYNTHETIC_PERSONAL_TRANSACTIONS.map((tx) => (
-                      <tr key={tx.id} className="hover:bg-slate-50/50">
-                        <td className="py-2.5 px-3 font-mono text-slate-600">
-                          {new Date(tx.date).toLocaleDateString()}
-                        </td>
-                        <td className="py-2.5 px-3 font-semibold text-slate-800">
-                          {tx.merchant}
-                        </td>
-                        <td className="py-2.5 px-3 text-slate-600">{tx.category}</td>
-                        <td className="py-2.5 px-3 text-slate-500">{tx.channel}</td>
-                        <td className="py-2.5 px-3 text-right font-mono font-semibold text-slate-800">
-                          ${tx.amount.toFixed(2)}
-                        </td>
-                        <td className="py-2.5 px-3 text-center">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700">
-                            Low Risk
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <EmptyState
-              icon={Receipt}
-              title="No transactions linked yet"
-              description="Upload a bank statement in Milestone 5 or link financial accounts to enable automated fraud monitoring."
-              actionLabel="View Sample Preview"
-              onAction={() => setShowSyntheticTransactions(true)}
-              actionIcon={Eye}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Section 5: Risk Alerts & Reports (Meaningful Empty States) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Alerts Card */}
-        <Card className="border-slate-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-900">
-              Active Security Alerts
-            </CardTitle>
-            <CardDescription className="text-xs text-slate-500">
-              Real-time threat notifications and suspicious attempt flags.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EmptyState
-              icon={AlertCircle}
-              title="No active security alerts"
-              description="Your account currently has zero flagged anomalies or blocked access attempts. Alerts will appear here when threats are detected."
-            />
-          </CardContent>
-        </Card>
-
-        {/* Safety Reports Card */}
-        <Card className="border-slate-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base font-bold text-slate-900">
-              Financial Safety Reports
-            </CardTitle>
-            <CardDescription className="text-xs text-slate-500">
-              Downloaded audit statements and compliance trust reports.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EmptyState
-              icon={FileText}
-              title="No reports generated yet"
-              description="Formal verification and trust evidence reports will be generated once full scanning modules run in Milestone 10."
-            />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Informational Shortcut Modal */}
-      {activeShortcutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full">
-                {activeShortcutModal.milestone} Preview
-              </span>
-              <button
-                onClick={() => setActiveShortcutModal(null)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">
-                {activeShortcutModal.title}
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {activeShortcutModal.description}
-              </p>
-            </div>
-
-            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-700 leading-relaxed">
-              {activeShortcutModal.details}
-            </div>
-
-            <div className="p-2.5 rounded-lg bg-blue-50/70 border border-blue-200/60 flex items-start gap-2 text-xs text-blue-900">
-              <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-              <span>
-                This module will become functional in <strong>{activeShortcutModal.milestone}</strong>. No fake transactions or simulated results are executed ahead of time.
-              </span>
-            </div>
-
-            <Button
-              className="w-full"
-              variant="secondary"
-              onClick={() => setActiveShortcutModal(null)}
-            >
-              Understood
-            </Button>
-          </div>
+          <span className="text-[11px] font-medium text-slate-400 shrink-0">
+            Zero-Fetch Threat Scanner • Client-Side PDF Audit
+          </span>
         </div>
-      )}
+      </footer>
     </div>
   );
 }

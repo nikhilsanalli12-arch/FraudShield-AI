@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   ShieldCheck,
@@ -8,30 +8,49 @@ import {
   Server,
   X,
   UserCheck,
+  Link2,
+  LayoutDashboard,
+  CreditCard,
 } from 'lucide-react';
 import Badge from '../common/Badge';
+import { getRoleDashboardPath } from '../../utils/navigation';
+
+export { getRoleDashboardPath };
 
 export default function DashboardSidebar({ isMobileOpen, onCloseMobile }) {
   const { role, user, profile } = useAuth();
   const effectiveRole = role || profile?.role || 'personal';
 
   // Navigation items strictly filtered by the database-verified role
+  // Ensures the Dashboard option is clearly visible and navigates to the role's primary dashboard
   const navItems = [
     {
-      name: 'Personal Safety',
+      name: 'Dashboard',
       path: '/dashboard',
-      icon: Shield,
+      icon: LayoutDashboard,
       allowedRoles: ['personal', 'analyst', 'admin'],
       exact: true,
     },
     {
-      name: 'Analyst Triage',
+      name: 'Bank Transactions',
+      path: '/dashboard/transactions',
+      icon: CreditCard,
+      allowedRoles: ['personal', 'analyst', 'admin'],
+    },
+    {
+      name: 'Link Scanner',
+      path: '/dashboard/link-scanner',
+      icon: Link2,
+      allowedRoles: ['personal', 'analyst', 'admin'],
+    },
+    {
+      name: effectiveRole === 'analyst' ? 'Analyst Dashboard' : 'Analyst Triage',
       path: '/analyst/dashboard',
       icon: Activity,
       allowedRoles: ['analyst', 'admin'],
     },
     {
-      name: 'Platform Health',
+      name: effectiveRole === 'admin' ? 'Admin Dashboard' : 'Platform Health',
       path: '/admin/dashboard',
       icon: Server,
       allowedRoles: ['admin'],
@@ -44,18 +63,23 @@ export default function DashboardSidebar({ isMobileOpen, onCloseMobile }) {
 
   const sidebarContent = (
     <div className="h-full flex flex-col justify-between p-4 bg-white border-r border-slate-200">
-      {/* Brand & Mobile Close */}
+      {/* Brand Logo: Clickable and navigates to the role's main dashboard */}
       <div>
         <div className="flex items-center justify-between pb-5 mb-5 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-navy-950 text-white flex items-center justify-center shadow-xs">
+          <Link
+            to={getRoleDashboardPath(effectiveRole)}
+            onClick={onCloseMobile}
+            className="flex items-center gap-2.5 group hover:opacity-90 transition-opacity focus:outline-hidden"
+            title="Go to Dashboard"
+          >
+            <div className="w-9 h-9 rounded-xl bg-navy-950 text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
               <ShieldCheck className="w-5 h-5 text-brand-400" />
             </div>
             <div>
               <span className="font-bold text-slate-900 text-sm tracking-tight">FraudShield AI</span>
               <span className="block text-[10px] text-slate-400 font-medium">FINANCIAL SAFETY</span>
             </div>
-          </div>
+          </Link>
           {onCloseMobile && (
             <button
               onClick={onCloseMobile}
